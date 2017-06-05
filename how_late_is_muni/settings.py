@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
+import logging
+import logging.config
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -26,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+LOGGING_CONFIG = logging.config.fileConfig(os.path.join(BASE_DIR, 'config.ini'))
 
 # Application definition
 
