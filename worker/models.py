@@ -24,9 +24,13 @@ class Stop(models.Model):
 
     tag = models.IntegerField(db_index=True)
     title = models.TextField(max_length=50)
-    route_id = models.ForeignKey(Route, to_field='id')
-    latitude = models.DecimalField(max_digits=8, decimal_places=5)
-    longitude = models.DecimalField(max_digits=8, decimal_places=5)
+    route_id = models.ForeignKey(Route,
+                                 to_field='id',
+                                 on_delete=models.PROTECT)
+    latitude = models.DecimalField(max_digits=8,
+                                   decimal_places=5)
+    longitude = models.DecimalField(max_digits=8,
+                                   decimal_places=5)
 
     class Meta:
         unique_together = (('tag', 'route_id'),)
@@ -43,15 +47,17 @@ class ScheduleClass(models.Model):
         name: The ScheduleClass tag for the schedule, which is a name for a schedule that is changed
             when the schedules are changed. Names are based on the date such as "2015T_FALL" or
             "2013OCTOBER"
-        date_active: Unix timestamp indicating when this schedule class was posted and replaced a
-            previous schedule class, used for determining the current schedule class.
+        is_active: Boolean indicating whether this is the currently active ScheduleClass for the
+            line.
     """
 
-    route_id = models.ForeignKey(Route, to_field='id')
+    route_id = models.ForeignKey(Route,
+                                 to_field='id',
+                                 on_delete=models.PROTECT)
     direction = models.CharField(max_length=8)
     service_class = models.CharField(max_length=3)
     name = models.TextField(max_length=20)
-    date_active = models.IntegerField()
+    is_active = models.BooleanField()
 
     class Meta:
         unique_together = (('route_id', 'direction', 'service_class'),)
@@ -67,8 +73,13 @@ class ScheduledArrival(models.Model):
             when the vehicle is scheduled to arrive at the stop.
     """
 
-    schedule_class_id = models.ForeignKey(ScheduleClass, to_field='id')
-    stop_id = models.ForeignKey(Stop, to_field='id', db_index=True)
+    schedule_class_id = models.ForeignKey(ScheduleClass,
+                                          to_field='id',
+                                          on_delete=models.PROTECT)
+    stop_id = models.ForeignKey(Stop,
+                                to_field='id',
+                                db_index=True,
+                                on_delete=models.PROTECT)
     block_id = models.IntegerField()
     arrival_time = models.IntegerField()
 
@@ -81,6 +92,11 @@ class Arrival(models.Model):
         time: Unix timestamp indicating when the vehicle arrived at the stop.
     """
 
-    stop_id = models.ForeignKey(Stop, to_field='id', db_index=True)
-    scheduled_arrival_id = models.ForeignKey(ScheduledArrival, to_field='id')
+    stop_id = models.ForeignKey(Stop,
+                                to_field='id',
+                                db_index=True,
+                                on_delete=models.PROTECT)
+    scheduled_arrival_id = models.ForeignKey(ScheduledArrival,
+                                             to_field='id',
+                                             on_delete=models.PROTECT)
     time = models.IntegerField()
