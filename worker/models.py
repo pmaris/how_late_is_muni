@@ -11,6 +11,9 @@ class Route(models.Model):
     tag = models.CharField(max_length=5, db_index=True, unique=True)
     title = models.TextField(max_length=40)
 
+    class Meta:
+        db_table = 'route'
+
 class Stop(models.Model):
     """Model of a single stop on a transit route.
 
@@ -28,12 +31,15 @@ class Stop(models.Model):
                                  to_field='id',
                                  on_delete=models.PROTECT)
     latitude = models.DecimalField(max_digits=8,
-                                   decimal_places=5)
+                                   decimal_places=5,
+                                   null=True)
     longitude = models.DecimalField(max_digits=8,
-                                   decimal_places=5)
+                                    decimal_places=5,
+                                    null=True)
 
     class Meta:
         unique_together = (('tag', 'route_id'),)
+        db_table = 'stop'
 
 class ScheduleClass(models.Model):
     """Model of a schedule class, used for determining if schedules stored in the database are
@@ -61,6 +67,7 @@ class ScheduleClass(models.Model):
 
     class Meta:
         unique_together = (('route_id', 'direction', 'service_class'),)
+        db_table = 'schedule_class'
 
 class ScheduledArrival(models.Model):
     """Model representing a single scheduled arrival for a route at a particular stop.
@@ -83,6 +90,9 @@ class ScheduledArrival(models.Model):
     block_id = models.IntegerField()
     arrival_time = models.IntegerField()
 
+    class Meta:
+        db_table = 'scheduled_arrival'
+
 class Arrival(models.Model):
     """Model of a vehicle's arrival at a stop.
 
@@ -100,3 +110,6 @@ class Arrival(models.Model):
                                              to_field='id',
                                              on_delete=models.PROTECT)
     time = models.IntegerField()
+
+    class Meta:
+        db_table = 'arrival'
