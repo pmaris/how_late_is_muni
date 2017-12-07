@@ -12,7 +12,7 @@ config.read(path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file
             'config.ini'))
 
 def get_routes():
-    """Get all existing routes on NextBug for a transit agency.
+    """Get all existing routes on NextBus for a transit agency.
 
     Returns:
         List of dictionaries for each route containing the following keys:
