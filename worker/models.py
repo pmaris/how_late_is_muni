@@ -69,24 +69,42 @@ class ScheduleClass(models.Model):
         unique_together = (('route_id', 'direction', 'service_class'),)
         db_table = 'schedule_class'
 
+class StopScheduleClass(models.Model):
+    """Model of an association between stops and schedule classes
+
+    Columns:
+        stop_id: ID referencing a stop.
+        schedule_class_id: ID of the schedule class the stop is associated with.
+        stop_order: Position of the stop along the route relative to the other stops for the route
+            in the schedule class. Ordering starts at 1 for the first stop on the route, and
+            increments by 1 for each successive stop.
+    """
+
+    stop_id = models.ForeignKey(Stop,
+                                to_field='id',
+                                on_delete=models.PROTECT)
+    schedule_class_id = models.ForeignKey(ScheduleClass,
+                                          to_field='id',
+                                          on_delete=models.PROTECT)
+    stop_order = models.IntegerField()
+
+    class Meta:
+        unique_together = (('stop_id', 'schedule_class_id', 'stop_order'),)
+        db_table = 'stop_schedule_class'
+
 class ScheduledArrival(models.Model):
     """Model representing a single scheduled arrival for a route at a particular stop.
 
     Columns:
-        schedule_class: ID of the schedule class associated with this arrival.
-        stop_id: ID of the stop associated with this arrival.
+        stop_schedule_class_id: ID of the stop schedule class associated with this arrival.
         block_id: Integer identifying a trip on a route.
         arrival_time: Timestamp representing milliseconds after the start of the day, indicating
             when the vehicle is scheduled to arrive at the stop.
     """
 
-    schedule_class_id = models.ForeignKey(ScheduleClass,
-                                          to_field='id',
-                                          on_delete=models.PROTECT)
-    stop_id = models.ForeignKey(Stop,
-                                to_field='id',
-                                db_index=True,
-                                on_delete=models.PROTECT)
+    stop_schedule_class_id = models.ForeignKey(StopScheduleClass,
+                                               to_field='id',
+                                               on_delete=models.PROTECT)
     block_id = models.IntegerField()
     arrival_time = models.IntegerField()
 
@@ -97,14 +115,13 @@ class Arrival(models.Model):
     """Model of a vehicle's arrival at a stop.
 
     Columns:
-        stop_id: ID of the stop associated with this arrival.
+        stop_id: Tag of the stop associated with this arrival.
         scheduled_arrival_id: ID of the scheduled arrival associated with this arrival.
         time: Unix timestamp indicating when the vehicle arrived at the stop.
     """
 
     stop_id = models.ForeignKey(Stop,
                                 to_field='id',
-                                db_index=True,
                                 on_delete=models.PROTECT)
     scheduled_arrival_id = models.ForeignKey(ScheduledArrival,
                                              to_field='id',
