@@ -3,6 +3,7 @@
 import configparser
 import logging
 import os.path as path
+import py_nextbus
 
 from worker.models import Stop
 from worker.libs import utils
@@ -66,17 +67,13 @@ def get_stop_coordinates_for_route(route_tag):
             longitude: Float, the longitude of the stop's location.
     """
 
-    params = {
-        'command': 'routeConfig',
-        'a': config.get('nextbus', 'agency'),
-        'r': route_tag
-    }
-    nextbus_response = utils.nextbus_request(url=config.get('nextbus', 'api_url'),
-                                             params=params)
+    nextbus_client = py_nextbus.NextBusClient(output_format='json',
+                                              agency=config.get('nextbus', 'agency'))
+    route_config = nextbus_client.get_route_config(route_tag=route_tag)
 
     stops = {}
 
-    for stop in utils.ensure_is_list(nextbus_response['route']['stop']):
+    for stop in utils.ensure_is_list(route_config['route']['stop']):
         stops[int(stop['tag'])] = {
             'latitude': float(stop['lat']),
             'longitude': float(stop['lon'])

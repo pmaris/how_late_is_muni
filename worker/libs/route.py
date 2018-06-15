@@ -4,6 +4,7 @@ import configparser
 from datetime import time
 import logging
 import os.path as path
+import py_nextbus
 
 from worker.libs import utils, stop, schedule
 from worker.models import Route, ScheduleClass
@@ -42,14 +43,11 @@ def get_routes():
             tag: String, short name of the route, eg, "38R".
             title: String, title of the route, eg, "38R-Geary Rapid".
     """
-    params = {
-        'command': 'routeList',
-        'a': config.get('nextbus', 'agency')
-    }
-    nextbus_response = utils.nextbus_request(url=config.get('nextbus', 'api_url'),
-                                             params=params)
 
-    return utils.ensure_is_list(nextbus_response['route'])
+    nextbus_client = py_nextbus.NextBusClient(output_format='json',
+                                              agency=config.get('nextbus', 'agency'))
+    route_list = nextbus_client.get_route_list()
+    return utils.ensure_is_list(route_list['route'])
 
 def get_route_schedule(route_tag):
     """Gets the schedule for a single route.
@@ -86,16 +84,12 @@ def get_route_schedule(route_tag):
             title: String, title of the route, eg, "38R-Geary Rapid".
     """
 
-    params = {
-        'command': 'schedule',
-        'a': config.get('nextbus', 'agency'),
-        'r': route_tag
-    }
-    nextbus_response = utils.nextbus_request(url=config.get('nextbus', 'api_url'),
-                                             params=params)
+    nextbus_client = py_nextbus.NextBusClient(output_format='json',
+                                              agency=config.get('nextbus', 'agency'))
+    schedule = nextbus_client.get_schedule(route_tag=route_tag)
 
     response = []
-    for route_schedule in utils.ensure_is_list(nextbus_response['route']):
+    for route_schedule in utils.ensure_is_list(schedule['route']):
         arrivals = []
         for trip in utils.ensure_is_list(route_schedule['tr']):
             stops = []
