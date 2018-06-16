@@ -37,13 +37,13 @@ def update_schedule_for_route(route_object):
     for schedule_class in schedules:
         schedule_class_object, created = \
             ScheduleClass.objects.get_or_create(defaults={
-                'route_id': route_object,
+                'route': route_object,
                 'direction': schedule_class['direction'],
                 'service_class': schedule_class['serviceClass'],
                 'name': schedule_class['scheduleClass'],
                 'is_active': True
             },
-                                                route_id=route_object,
+                                                route=route_object,
                                                 direction=schedule_class['direction'],
                                                 service_class=schedule_class['serviceClass'])
         if created:
@@ -57,26 +57,26 @@ def update_schedule_for_route(route_object):
                 # is not scheduled for that trip
                 if trip_stop['epochTime'] != -1:
                     print(trip_stop['tag'])
-                    db_stop = Stop.objects.get(route_id=route_object,
+                    db_stop = Stop.objects.get(route=route_object,
                                                tag=trip_stop['tag'])
                     stop_schedule_class, _ = \
                         StopScheduleClass.objects.update_or_create(defaults={
-                                'stop_id': db_stop,
-                                'schedule_class_id': schedule_class_object,
+                                'stop': db_stop,
+                                'schedule_class': schedule_class_object,
                                 'stop_order': order
                             },
-                            stop_id=db_stop,
-                            schedule_class_id=schedule_class_object,
+                            stop=db_stop,
+                            schedule_class=schedule_class_object,
                             stop_order=order)
 
                     new_scheduled_arrival, arrival_created = \
                         ScheduledArrival.objects.update_or_create(
                             defaults={
-                                'stop_schedule_class_id': stop_schedule_class,
+                                'stop_schedule_class': stop_schedule_class,
                                 'block_id': trip['blockID'],
                                 'arrival_time': trip_stop['epochTime']
                             },
-                            stop_schedule_class_id=stop_schedule_class,
+                            stop_schedule_class=stop_schedule_class,
                             block_id=trip['blockID'],
                             arrival_time=trip_stop['epochTime'])
                     if arrival_created:

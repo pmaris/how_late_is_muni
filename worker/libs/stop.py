@@ -43,9 +43,9 @@ def add_stops_for_route_to_database(stops, route_object):
                 'title': stop['name'],
                 'latitude': latitude,
                 'longitude': longitude,
-                'route_id': route_object
+                'route': route_object
             },
-                                          route_id=route_object,
+                                          route=route_object,
                                           tag=stop['tag'],
                                           latitude=latitude,
                                           longitude=longitude)
