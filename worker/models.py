@@ -28,7 +28,8 @@ class Stop(models.Model):
     tag = models.IntegerField(db_index=True)
     title = models.TextField(max_length=50)
     route = models.ForeignKey(Route,
-                              on_delete=models.PROTECT)
+                              on_delete=models.PROTECT,
+                              related_name='stop')
     latitude = models.DecimalField(max_digits=8,
                                    decimal_places=5,
                                    null=True)
@@ -57,7 +58,8 @@ class ScheduleClass(models.Model):
     """
 
     route = models.ForeignKey(Route,
-                              on_delete=models.PROTECT)
+                              on_delete=models.PROTECT,
+                              related_name='schedule_class')
     direction = models.CharField(max_length=8)
     service_class = models.CharField(max_length=3)
     name = models.TextField(max_length=20)
@@ -79,9 +81,11 @@ class StopScheduleClass(models.Model):
     """
 
     stop = models.ForeignKey(Stop,
-                             on_delete=models.PROTECT)
+                             on_delete=models.PROTECT,
+                             related_name='stop_schedule_class')
     schedule_class = models.ForeignKey(ScheduleClass,
-                                       on_delete=models.PROTECT)
+                                       on_delete=models.PROTECT,
+                                       related_name='stop_schedule_class')
     stop_order = models.IntegerField()
 
     class Meta:
@@ -99,7 +103,8 @@ class ScheduledArrival(models.Model):
     """
 
     stop_schedule_class = models.ForeignKey(StopScheduleClass,
-                                            on_delete=models.PROTECT)
+                                            on_delete=models.PROTECT,
+                                            related_name='scheduled_arrival')
     block_id = models.IntegerField()
     arrival_time = models.IntegerField()
 
@@ -118,7 +123,8 @@ class Arrival(models.Model):
     stop = models.ForeignKey(Stop,
                              on_delete=models.PROTECT)
     scheduled_arrival = models.ForeignKey(ScheduledArrival,
-                                          on_delete=models.PROTECT)
+                                          on_delete=models.PROTECT,
+                                          related_name='arrival')
     time = models.IntegerField()
 
     class Meta:
