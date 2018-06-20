@@ -46,9 +46,7 @@ def add_stops_for_route_to_database(stops, route_object):
                 'route': route_object
             },
                                           route=route_object,
-                                          tag=stop['tag'],
-                                          latitude=latitude,
-                                          longitude=longitude)
+                                          tag=stop['tag'])
         if stop_created:
             log.info('New Stop added to database: %s', new_stop)
         else:
