@@ -1,3 +1,5 @@
+from django.db import connection
+
 def ensure_is_list(value):
     """Guarantee that a given value is returned as a list. If the value is not a list, a list
     containing the provided value as its only item is returned. If the value is already a list, it
@@ -18,3 +20,37 @@ def ensure_is_list(value):
         return value
     else:
         return [value]
+
+def bulk_insert(table_name, column_names, update_columns, data):
+    """Perform a bulk insert into a table in the database with an ON DUPLICATE KEY UPDATE, which is
+    not supported by Django's bulk_create method.
+
+    Arguments:
+        table_name: (String) Name of the database table to insert the data in to.
+        column_names: (List of strings) List of names of the columns to insert values into.
+        update_columns: (List of strings) Names of the columns to update in the ON DUPLICATE KEY
+            UPDATE clause.
+        data: (Nested lists) List containing lists of each row of data to insert into the database,
+            with the data for each column being in the same order as the names of the columns in the
+            provided column_names list.
+    """
+
+    # Construct column names to insert the data into
+    columns = ','.join(['`%s`' % column_name for column_name in column_names])
+
+    # Construct the insert for a single row with the necessary number of parameters
+    parameterized_row = '(%s)' % ','.join(['%s'] * len(column_names))
+
+    # Construct parameterized inserts for each row of data to insert
+    parameterized_rows = ','.join([parameterized_row] * len(data))
+
+    # Construct the columns to update on the duplicate key condition
+    update_clause = ','.join(['`%s`=VALUES(`%s`)' % (column, column) for column in update_columns])
+
+    sql = 'INSERT INTO `%s` (%s) ' \
+          'VALUES %s ' \
+          'ON DUPLICATE KEY UPDATE %s' % (table_name, columns, parameterized_rows, update_clause)
+    params = [item for column in data for item in column]
+
+    with connection.cursor() as cursor:
+        cursor.execute(sql, params)

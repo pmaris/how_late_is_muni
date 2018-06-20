@@ -29,6 +29,7 @@ def add_stops_for_route_to_database(stops, route_object):
     log.info('Getting coordinates of stops on route')
     stop_coordinates = get_stop_coordinates_for_route(route_object.tag)
 
+    stop_list = []
     for stop in stops:
         if stop['tag'] in stop_coordinates:
             latitude = stop_coordinates[stop['tag']]['latitude']
@@ -36,21 +37,21 @@ def add_stops_for_route_to_database(stops, route_object):
         else:
             log.warning('Could not get coordinates for stop %s in in schedule for route %s',
                         stop['tag'], route_object.tag)
+            latitude = None
+            longitude = None
 
-        new_stop, stop_created = \
-            Stop.objects.update_or_create(defaults={
-                'tag': stop['tag'],
-                'title': stop['name'],
-                'latitude': latitude,
-                'longitude': longitude,
-                'route': route_object
-            },
-                                          route=route_object,
-                                          tag=stop['tag'])
-        if stop_created:
-            log.info('New Stop added to database: %s', new_stop)
-        else:
-            log.info('Updated Stop in database with values: %s', new_stop)
+        stop_list.append([
+            route_object.id,
+            stop['tag'],
+            stop['name'],
+            latitude,
+            longitude
+        ])
+
+    utils.bulk_insert(table_name=Stop._meta.db_table,
+                      column_names=['route_id', 'tag', 'title', 'latitude', 'longitude'],
+                      update_columns=['route_id', 'title', 'latitude', 'longitude'],
+                      data=stop_list)
 
 def get_stop_coordinates_for_route(route_tag):
     """Get the latitude and longitude of all of the stops on a route.

@@ -39,9 +39,7 @@ class Command(BaseCommand):
         # Update all routes if one wasn't specified
         if options['route_tag'] is None:
             # Deactivate all existing ScheduleClasses in the database
-            for schedule_class in ScheduleClass.objects.all():
-                schedule_class.is_active = False
-                schedule_class.save()
+            ScheduleClass.objects.all().update(is_active=False)
 
             routes = route.get_routes()
             route.add_routes_to_database(routes)
@@ -59,9 +57,7 @@ class Command(BaseCommand):
                 route_object = Route.objects.get(tag=options['route_tag'])
 
                 # Deactivate all existing ScheduleClasses for the route in the database
-                for schedule_class in ScheduleClass.objects.filter(route_id=route_object):
-                    schedule_class.is_active = False
-                    schedule_class.save()
+                ScheduleClass.objects.filter(route_id=route_object).update(is_active=False)
 
                 schedule.update_schedule_for_route(route_object)
             else:

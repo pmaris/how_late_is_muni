@@ -24,16 +24,11 @@ def add_routes_to_database(routes):
             tag: String, short name of the route, eg, "38R".
             title: String, title of the route, eg, "38R-Geary Rapid".
     """
-    for route in routes:
-        new_route, created = Route.objects.update_or_create(tag=route['tag'],
-                                                            defaults={
-                                                                'tag': route['tag'],
-                                                                'title': route['title']
-                                                            })
-        if created:
-            log.info('New Route added to database: %s', new_route)
-        else:
-            log.info('Route %s already exists in database', new_route)
+
+    utils.bulk_insert(table_name=Route._meta.db_table,
+                     column_names=['tag', 'title'],
+                     update_columns=['title'],
+                     data=[[route['tag'], route['title']] for route in routes])
 
 def get_routes():
     """Get all existing routes on NextBus for a transit agency.
