@@ -109,6 +109,7 @@ class ScheduledArrival(models.Model):
     arrival_time = models.IntegerField()
 
     class Meta:
+        unique_together = (('stop_schedule_class', 'block_id', 'arrival_time'),)
         db_table = 'scheduled_arrival'
 
 class Arrival(models.Model):
