@@ -5,7 +5,7 @@ import logging
 import os.path as path
 
 from worker.models import ScheduledArrival, ScheduleClass, Stop, StopScheduleClass
-from worker.libs import route, stop
+from worker.libs import route, stop, utils
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +22,8 @@ def update_schedule_for_route(route_object):
     """
 
     schedules = route.get_route_schedule(route_tag=route_object.tag)
+    if schedules is None:
+        return
 
     # Get unique stops for the route
     stops = []
@@ -34,6 +36,16 @@ def update_schedule_for_route(route_object):
 
     stop.add_stops_for_route_to_database(stops=stops,
                                          route_object=route_object)
+
+    # Get all stops for the route from the database, including the routes that were just added, so
+    # that each stop doesn't need to be repeatedly retrieved from the database when adding stop
+    # schedule classes
+    route_stops = Stop.objects.filter(route=route_object)
+
+    schedule_classes = []
+    stop_schedule_classes = []
+    scheduled_arrivals = []
+
     for schedule_class in schedules:
         schedule_class_object, created = \
             ScheduleClass.objects.get_or_create(defaults={
@@ -51,36 +63,50 @@ def update_schedule_for_route(route_object):
         else:
             log.info('Retrieved ScheduleClass from database: %s', schedule_class_object)
 
+        schedule_classes.append(schedule_class_object)
+
         for trip in schedule_class['arrivals']:
             for order, trip_stop in enumerate(trip['stops'], 1):
                 # Skip stops with an arrival time of -1, which indicates that the stop
                 # is not scheduled for that trip
                 if trip_stop['epochTime'] != -1:
-                    print(trip_stop['tag'])
-                    db_stop = Stop.objects.get(route=route_object,
-                                               tag=trip_stop['tag'])
-                    stop_schedule_class, _ = \
-                        StopScheduleClass.objects.update_or_create(defaults={
-                                'stop': db_stop,
-                                'schedule_class': schedule_class_object,
-                                'stop_order': order
-                            },
-                            stop=db_stop,
-                            schedule_class=schedule_class_object,
-                            stop_order=order)
+                    # Get the stop for the arrival, without querying the database
+                    db_stop = [stop for stop in route_stops if stop.tag == trip_stop['tag']][0]
 
-                    new_scheduled_arrival, arrival_created = \
-                        ScheduledArrival.objects.update_or_create(
-                            defaults={
-                                'stop_schedule_class': stop_schedule_class,
-                                'block_id': trip['blockID'],
-                                'arrival_time': trip_stop['epochTime']
-                            },
-                            stop_schedule_class=stop_schedule_class,
-                            block_id=trip['blockID'],
-                            arrival_time=trip_stop['epochTime'])
-                    if arrival_created:
-                        log.info('New ScheduledArrival added to database: %s', new_scheduled_arrival)
-                    else:
-                        log.info('Updated ScheduledArrival in database with values: %s',
-                                 new_scheduled_arrival)
+                    stop_schedule_classes.append([
+                        db_stop.id,
+                        schedule_class_object.id,
+                        order
+                    ])
+
+                    # Add details for the scheduled arrivals that can be added now. The ID of the
+                    # stop schedule class will be appended to the data once the stop schedule
+                    # classes are inserted into the database
+                    scheduled_arrivals.append([
+                        trip['blockID'],
+                        trip_stop['epochTime']
+                    ])
+
+    utils.bulk_insert(table_name=StopScheduleClass._meta.db_table,
+                      column_names=['stop_id', 'schedule_class_id', 'stop_order'],
+                      data=stop_schedule_classes,
+                      ignore_duplicates=True)
+
+    stop_schedule_class_objects = \
+        StopScheduleClass.objects.filter(schedule_class__in=schedule_classes,
+                                         stop__in=route_stops)
+
+    # Go back through all of the stop schedule classes that were added to bulk insert all of the
+    # scheduled arrivals for them
+    for i, stop_schedule_class_data in enumerate(stop_schedule_classes):
+        stop_id, schedule_class_id, order = stop_schedule_class_data
+        stop_schedule_class = \
+            [ssc for ssc in stop_schedule_class_objects if ssc.stop_id == stop_id and \
+                                                           ssc.schedule_class_id == schedule_class_id and \
+                                                           ssc.stop_order == order][0]
+        scheduled_arrivals[i].append(stop_schedule_class.id)
+
+    utils.bulk_insert(table_name=ScheduledArrival._meta.db_table,
+                      column_names=['block_id', 'arrival_time', 'stop_schedule_class_id'],
+                      data=scheduled_arrivals,
+                      ignore_duplicates=True)

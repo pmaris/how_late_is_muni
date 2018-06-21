@@ -21,18 +21,21 @@ def ensure_is_list(value):
     else:
         return [value]
 
-def bulk_insert(table_name, column_names, update_columns, data):
+def bulk_insert(table_name, column_names, data, update_columns=None, ignore_duplicates=False):
     """Perform a bulk insert into a table in the database with an ON DUPLICATE KEY UPDATE, which is
     not supported by Django's bulk_create method.
 
     Arguments:
         table_name: (String) Name of the database table to insert the data in to.
         column_names: (List of strings) List of names of the columns to insert values into.
-        update_columns: (List of strings) Names of the columns to update in the ON DUPLICATE KEY
-            UPDATE clause.
         data: (Nested lists) List containing lists of each row of data to insert into the database,
             with the data for each column being in the same order as the names of the columns in the
             provided column_names list.
+        update_columns: (List of strings) Names of the columns to update in the ON DUPLICATE KEY
+            UPDATE clause. If this is None, the ON DUPLICATE KEY UPDATE clause will not be added to
+            the SQL statement that is executed.
+        ignore: (Boolean) Indicates if the IGNORE modifier should be used to ignore errors that
+            occur with the insert.
     """
 
     # Construct column names to insert the data into
@@ -45,11 +48,19 @@ def bulk_insert(table_name, column_names, update_columns, data):
     parameterized_rows = ','.join([parameterized_row] * len(data))
 
     # Construct the columns to update on the duplicate key condition
-    update_clause = ','.join(['`%s`=VALUES(`%s`)' % (column, column) for column in update_columns])
+    if update_columns is not None:
+        update_clause = 'ON DUPLICATE KEY UPDATE %s' % \
+                        ','.join(['`%s`=VALUES(`%s`)' % (column, column) for column in update_columns])
+    else:
+        update_clause = ''
 
-    sql = 'INSERT INTO `%s` (%s) ' \
-          'VALUES %s ' \
-          'ON DUPLICATE KEY UPDATE %s' % (table_name, columns, parameterized_rows, update_clause)
+    if ignore:
+        insert_statement = 'INSERT IGNORE INTO '
+    else:
+        insert_statement = 'INSERT INTO '
+
+    sql = '%s `%s` (%s) VALUES %s %s' % (insert_statement, table_name, columns, parameterized_rows,
+                                         update_clause)
     params = [item for column in data for item in column]
 
     with connection.cursor() as cursor:
