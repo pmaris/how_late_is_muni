@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import connection
 
 def ensure_is_list(value):
@@ -65,3 +67,30 @@ def bulk_insert(table_name, column_names, data, update_columns=None, ignore_dupl
 
     with connection.cursor() as cursor:
         cursor.execute(sql, params)
+
+def get_current_service_class():
+    """Get the service class for the current day/
+
+    Returns:
+        String, the service class for the current day. "wkd" if the current day is a weekday, "sat"
+        if the current day is Saturday, and "sun" if the current day is Sunday.
+    """
+
+    current_day = datetime.datetime.now().strftime('%A')
+
+    if current_day == 'Saturday':
+        return 'sat'
+    elif current_day == 'Sunday':
+        return 'sun'
+    else:
+        return 'wkd'
+
+def get_seconds_since_midnight():
+    """Get the number of seconds that have elapsed since midnight of the current day.
+
+    Returns:
+        Integer, the number of seconds that have elapsed since midnight of the current day.
+    """
+
+    current_time = datetime.datetime.now().timetuple()
+    return (current_time.tm_hour * 60 * 60) + (current_time.tm_min * 60) + current_time.tm_sec

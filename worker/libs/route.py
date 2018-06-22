@@ -77,11 +77,17 @@ def get_route_schedule(route_tag):
                     tag: Integer, unique ID of the stop.
             tag: String, short name of the route, eg, "38R".
             title: String, title of the route, eg, "38R-Geary Rapid".
+
+        If the schedule returned by NextBus does not actually include any schedule data, None will
+        be returned.
     """
 
     nextbus_client = py_nextbus.NextBusClient(output_format='json',
                                               agency=config.get('nextbus', 'agency'))
     schedule = nextbus_client.get_schedule(route_tag=route_tag)
+
+    if 'route' not in schedule:
+        return None
 
     response = []
     for route_schedule in utils.ensure_is_list(schedule['route']):

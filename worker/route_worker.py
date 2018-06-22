@@ -1,8 +1,10 @@
 import logging
+import time
 
 import py_nextbus
 
 from worker.models import Arrival, Route, ScheduleClass, ScheduledArrival, Stop
+import worker.libs.utils as utils
 
 LOG = logging.getLogger(__name__)
 
@@ -18,8 +20,11 @@ class RouteWorker(object):
                 "wkd", "sat", "sun".
         """
 
+        self.running = False
+
         self.agency = agency
         self.route = Route.objects.get(tag=route_tag)
+        self.service_class = service_class
 
         self.stops =  Stop.objects.filter(route=self.route,
                                           stop_schedule_class__schedule_class__service_class=service_class,
@@ -68,13 +73,13 @@ class RouteWorker(object):
         # the stop if they disappear from the predictions
         arrival_threshold = 500
 
-        stop_arrivals = {}
+        arrivals = {}
         for stop_tag, blocks in previous_predictions.items():
             if stop_tag not in current_predictions:
                 LOG.warning('Stop %s is not in the current set of predictions', stop_tag)
                 continue
 
-            stop_arrivals[stop_tag] = []
+            stop_arrivals = []
             for block_id, trips in blocks.items():
                 # If a block ID that was in the previous predictions is not present in the most
                 # recent predictions, consider it to have arrived if the earliest predictied
@@ -85,7 +90,7 @@ class RouteWorker(object):
                     # Might need to add a time buffer, in case the vehicle was slightly delayed
                     if next_arrival_time < arrival_threshold or \
                             next_arrival_time < time_between_retrievals:
-                        stop_arrivals[stop_tag].append(block_id)
+                        stop_arrivals.append(block_id)
 
                 else:
                     for trip_id, arrival_seconds in trips.items():
@@ -97,9 +102,13 @@ class RouteWorker(object):
                         if trip_id not in current_predictions[stop_tag][block_id] and \
                                 (arrival_seconds < arrival_threshold or
                                  time_between_retrievals > arrival_seconds):
-                            stop_arrivals[stop_tag].append(block_id)
+                            stop_arrivals.append(block_id)
 
-        return stop_arrivals
+            if stop_arrivals:
+                arrivals[stop_tag] = stop_arrivals
+
+        LOG.debug('Found arrivals: %s', arrivals)
+        return arrivals
 
     def get_predictions(self, stop_tags):
         """Get predictions for multiple stops, and return formatted arrival predictions for those
@@ -125,14 +134,16 @@ class RouteWorker(object):
             }
         """
 
+        LOG.debug('Getting predictions')
+
         stops = [{'route_tag': self.route.tag, 'stop_tag': stop_tag} for stop_tag in stop_tags]
         predictions = self.nextbus_client.get_predictions_for_multi_stops(stops)
 
         prediction_dict = {}
         for stop in predictions['predictions']:
             stop_predictions = {}
-            for direction in stop['direction']:
-                for prediction in direction['prediction']:
+            for direction in utils.ensure_is_list(stop.get('direction', [])):
+                for prediction in utils.ensure_is_list(direction.get('prediction', [])):
                     block_id = int(prediction['block'])
                     if block_id not in stop_predictions:
                         stop_predictions[block_id] = {}
@@ -188,6 +199,8 @@ class RouteWorker(object):
             }
         """
 
+        LOG.info('Getting scheculed arrivals for service class %s', service_class)
+
         scheduled_arrivals = ScheduledArrival.objects.filter(
             stop_schedule_class__schedule_class__route__exact=self.route,
             stop_schedule_class__schedule_class__service_class__exact=service_class,
@@ -207,6 +220,43 @@ class RouteWorker(object):
             scheduled_arrival_dict[stop_tag][int(scheduled_arrival.block_id)].append(scheduled_arrival)
 
         return scheduled_arrival_dict
+
+    def run(self):
+        """Run the worker to get arrivals. This will start a loop that performs the following
+        actions:
+        1. Get arrival predictions for all stops with schedule information on the route.
+        2. Determine if any arrivals occurred between the latest predictions and the previously
+            retrieved predictions.
+        3. If any arrivals were found, save them to the database.
+        """
+
+        self.running = True
+
+        scheduled_arrivals = self.get_scheduled_arrivals(service_class=self.service_class)
+        stop_tags = [stop.tag for stop in self.stops]
+
+        current_predictions = {}
+        current_retrieve_time = 0
+        while self.running:
+            previous_predictions = current_predictions
+            previous_retrieve_time = current_retrieve_time
+
+            current_predictions = self.get_predictions(stop_tags=stop_tags)
+            current_retrieve_time = utils.get_seconds_since_midnight()
+
+            arrivals = self.get_arrivals(current_predictions=current_predictions,
+                                         current_predictions_retrieve_time=current_retrieve_time,
+                                         previous_predictions=previous_predictions,
+                                         previous_predictions_retrieve_time=previous_retrieve_time)
+
+            if arrivals:
+                self.save_arrivals(arrivals=arrivals,
+                                   arrival_time=current_retrieve_time,
+                                   scheduled_arrivals=scheduled_arrivals)
+            else:
+                LOG.debug('No arrivals to save')
+
+            time.sleep(20)
 
     def save_arrivals(self, arrivals, arrival_time, scheduled_arrivals):
         """Save arrivals to the database.
@@ -228,7 +278,7 @@ class RouteWorker(object):
                     self.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
                                                            block_id=block_id,
                                                            arrival_time=arrival_time,
-                                                           scheduled_arrivals=scheduled_arrivals)
+                                                           scheduled_arrivals=scheduled_arrivals[stop_tag][block_id])
 
                 arrival = Arrival(stop=scheduled_arrival.stop_schedule_class.stop,
                                   scheduled_arrival=scheduled_arrival,
