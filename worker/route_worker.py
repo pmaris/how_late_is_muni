@@ -1,4 +1,7 @@
+import configparser
 import logging
+import os.path as path
+import threading
 import time
 
 import py_nextbus
@@ -8,7 +11,12 @@ import worker.libs.utils as utils
 
 LOG = logging.getLogger(__name__)
 
-class RouteWorker(object):
+config = configparser.ConfigParser()
+#TODO: Clean this up
+config.read(path.join(path.dirname(path.dirname(path.abspath(__file__))),
+            'config.ini'))
+
+class RouteWorker(threading.Thread):
     """Class to manage the predictions and arrivals for a single route."""
 
     def __init__(self, route_tag, agency, service_class):
@@ -19,6 +27,8 @@ class RouteWorker(object):
             service_class: (String) The current day of the week to use the schedule for, either
                 "wkd", "sat", "sun".
         """
+
+        threading.Thread.__init__(self, name='%s worker' % route_tag)
 
         self.running = False
 
@@ -33,6 +43,8 @@ class RouteWorker(object):
 
         self.nextbus_client = py_nextbus.NextBusClient(output_format='json',
                                                        agency=agency)
+
+        self.update_frequency = int(config.get('worker', 'prediction_update_seconds'))
 
     def get_arrivals(self, current_predictions, current_predictions_retrieve_time,
                      previous_predictions, previous_predictions_retrieve_time):
@@ -256,7 +268,9 @@ class RouteWorker(object):
             else:
                 LOG.debug('No arrivals to save')
 
-            time.sleep(20)
+            time.sleep(self.update_frequency)
+
+        LOG.info('Stopping worker')
 
     def save_arrivals(self, arrivals, arrival_time, scheduled_arrivals):
         """Save arrivals to the database.

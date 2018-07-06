@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 import worker.libs.utils as utils
 from worker.models import Route
+from worker.route_manager import RouteManager
 from worker.route_worker import RouteWorker
 
 log = logging.getLogger(__name__)
@@ -35,7 +36,8 @@ class Command(BaseCommand):
         service_class = utils.get_current_service_class()
 
         if options['route_tag'] is None:
-            raise NotImplementedError()
+
+            manager = RouteManager()
         else:
             if options['route_tag'] not in active_route_tags:
                 raise CommandError('Route %s is not a valid route' % options['route_tag'])

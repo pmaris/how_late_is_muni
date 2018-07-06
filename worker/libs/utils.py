@@ -36,8 +36,8 @@ def bulk_insert(table_name, column_names, data, update_columns=None, ignore_dupl
         update_columns: (List of strings) Names of the columns to update in the ON DUPLICATE KEY
             UPDATE clause. If this is None, the ON DUPLICATE KEY UPDATE clause will not be added to
             the SQL statement that is executed.
-        ignore: (Boolean) Indicates if the IGNORE modifier should be used to ignore errors that
-            occur with the insert.
+        ignore_duplicates: (Boolean) Indicates if the IGNORE modifier should be used to ignore
+            errors that occur with the insert.
     """
 
     # Construct column names to insert the data into
@@ -56,7 +56,7 @@ def bulk_insert(table_name, column_names, data, update_columns=None, ignore_dupl
     else:
         update_clause = ''
 
-    if ignore:
+    if ignore_duplicates:
         insert_statement = 'INSERT IGNORE INTO '
     else:
         insert_statement = 'INSERT INTO '

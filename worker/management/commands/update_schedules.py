@@ -36,19 +36,21 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         log.info('Updating schedules in database')
 
+        agency = config.get('nextbus', 'agency')
+
         # Update all routes if one wasn't specified
         if options['route_tag'] is None:
             # Deactivate all existing ScheduleClasses in the database
             ScheduleClass.objects.all().update(is_active=False)
 
-            routes = route.get_routes()
+            routes = route.get_routes(agency)
             route.add_routes_to_database(routes)
             for r in routes:
                 schedule.update_schedule_for_route(Route.objects.get(tag=r['tag']))
 
         # Update provided route
         else:
-            routes = route.get_routes()
+            routes = route.get_routes(agency)
 
             # Check if provided route is an existing route for the agency
             matching_route = list(filter(lambda r: r['tag'] == options['route_tag'], routes))

@@ -7,7 +7,7 @@ import os.path as path
 from worker.models import ScheduledArrival, ScheduleClass, Stop, StopScheduleClass
 from worker.libs import route, stop, utils
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
 #TODO: Clean this up
@@ -25,10 +25,36 @@ def update_schedule_for_route(route_object):
     if schedules is None:
         return
 
+    schedules_to_add = []
+    # Check if each combination of schedule class, service class, and direction already exists in
+    # the database for the route
+    for schedule in schedules:
+        try:
+            existing_schedule_class = \
+                ScheduleClass.objects.get(route=route_object,
+                                          direction=schedule.get('direction'),
+                                          service_class=schedule.get('serviceClass'))
+        except ScheduleClass.DoesNotExist:
+            schedules_to_add.append(schedule)
+
+        else:
+            # If there is already a schedule class in the database for the route for the same
+            # direction but with a different name, deactivate thie existing schedule class and add
+            # a one with the new name
+            if existing_schedule_class.name != schedule.get('scheduleClass'):
+                schedules_to_add.append(schedule)
+
+                existing_schedule_class.is_active = False
+                existing_schedule_class.save()
+
+    if not schedules_to_add:
+        LOG.info('No new schedules were found')
+        return
+
     # Get unique stops for the route
     stops = []
     stop_tags = []
-    for schedule_class in schedules:
+    for schedule_class in schedules_to_add:
         for schedule_class_stop in schedule_class['stops']:
             if schedule_class_stop['tag'] not in stop_tags:
                 stops.append(schedule_class_stop)
@@ -46,7 +72,7 @@ def update_schedule_for_route(route_object):
     stop_schedule_classes = []
     scheduled_arrivals = []
 
-    for schedule_class in schedules:
+    for schedule_class in schedules_to_add:
         schedule_class_object, created = \
             ScheduleClass.objects.get_or_create(defaults={
                 'route': route_object,

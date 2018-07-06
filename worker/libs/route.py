@@ -26,29 +26,31 @@ def add_routes_to_database(routes):
     """
 
     utils.bulk_insert(table_name=Route._meta.db_table,
-                     column_names=['tag', 'title'],
-                     update_columns=['title'],
-                     data=[[route['tag'], route['title']] for route in routes])
+                      column_names=['tag', 'title'],
+                      update_columns=['title'],
+                      data=[[route['tag'], route['title']] for route in routes])
 
-def get_routes():
+def get_routes(agency):
     """Get all existing routes on NextBus for a transit agency.
+
+    Arguments:
+        agency: (String) Name of a transit agency on NextBus.
 
     Returns:
         List of dictionaries for each route containing the following keys:
             tag: String, short name of the route, eg, "38R".
             title: String, title of the route, eg, "38R-Geary Rapid".
     """
-
     nextbus_client = py_nextbus.NextBusClient(output_format='json',
-                                              agency=config.get('nextbus', 'agency'))
+                                              agency=agency)
     route_list = nextbus_client.get_route_list()
-    return utils.ensure_is_list(route_list['route'])
+    return utils.ensure_is_list(route_list.get('route', []))
 
 def get_route_schedule(route_tag):
     """Gets the schedule for a single route.
 
     Arguments:
-        route_tag: String, the route tag of the route to retrieve the schedule for.
+        route_tag: (String) The route tag of the route to retrieve the schedule for.
 
     Returns:
         List of dictionaries for each service class (Schedule for one direction for a day of the
