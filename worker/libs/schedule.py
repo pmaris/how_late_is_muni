@@ -85,9 +85,9 @@ def update_schedule_for_route(route_object):
                                                 direction=schedule_class['direction'],
                                                 service_class=schedule_class['serviceClass'])
         if created:
-            log.info('New ScheduleClass added to database: %s', schedule_class_object)
+            LOG.info('New ScheduleClass added to database: %s', schedule_class_object)
         else:
-            log.info('Retrieved ScheduleClass from database: %s', schedule_class_object)
+            LOG.info('Retrieved ScheduleClass from database: %s', schedule_class_object)
 
         schedule_classes.append(schedule_class_object)
 
