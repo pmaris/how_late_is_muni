@@ -1,3 +1,7 @@
+Application for tracking the arrival times for all San Francisco Muni transit route using the NextBus API, for determining the on-time performance of every route on a stop-by-stop basis.
+
+This project is a complete refactor from the ground up of a project I previously worked on in 2013 and 2014. Currently, the half of the application for monitoring and storing arrivals is in progress. Once that is completed, the next half will be to build a website (Using Django) for presenting the results, including daily on-time performance calculations on each stop on every route, and aggregations of data over time and along entire routes.
+
 Getting started
 ---
 First, install prerequisites:
