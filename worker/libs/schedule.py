@@ -51,6 +51,9 @@ def update_schedule_for_route(route_object):
         LOG.info('No new schedules were found')
         return
 
+    # Deactivate all existing ScheduleClasses for the route in the database
+    ScheduleClass.objects.filter(route_id=route_object).update(is_active=False)
+
     # Get unique stops for the route
     stops = []
     stop_tags = []

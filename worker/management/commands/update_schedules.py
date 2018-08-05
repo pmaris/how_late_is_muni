@@ -58,9 +58,6 @@ class Command(BaseCommand):
                 route.add_routes_to_database(matching_route)
                 route_object = Route.objects.get(tag=options['route_tag'])
 
-                # Deactivate all existing ScheduleClasses for the route in the database
-                ScheduleClass.objects.filter(route_id=route_object).update(is_active=False)
-
                 schedule.update_schedule_for_route(route_object)
             else:
                 raise CommandError('Route %s is not a valid route' % options['route_tag'])
