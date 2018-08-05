@@ -45,6 +45,7 @@ class RouteWorker(threading.Thread):
                                                        agency=agency)
 
         self.update_frequency = int(config.get('worker', 'prediction_update_seconds'))
+        self.duplicate_arrival_threshold = int(config.get('worker', 'duplicate_arrival_threshold'))
 
     def get_arrivals(self, current_predictions, current_predictions_retrieve_time,
                      previous_predictions, previous_predictions_retrieve_time):
@@ -294,7 +295,12 @@ class RouteWorker(threading.Thread):
                                                            arrival_time=arrival_time,
                                                            scheduled_arrivals=scheduled_arrivals[stop_tag][block_id])
 
-                arrival = Arrival(stop=scheduled_arrival.stop_schedule_class.stop,
-                                  scheduled_arrival=scheduled_arrival,
-                                  time=arrival_time)
-                arrival.save()
+                # If there was already an arrival at the same stop for the same scheduled arrival,
+                # consider the two arrivals to be duplicates if they are within a certain threshold,
+                # and update the the arrival time to the current arrival's time.
+                Arrival.objects.update_or_create(stop=scheduled_arrival.stop_schedule_class.stop,
+                                                 scheduled_arrival=scheduled_arrival,
+                                                 time__gte=arrival_time - self.duplicate_arrival_threshold,
+                                                 defaults={
+                                                     'time': arrival_time
+                                                 })
