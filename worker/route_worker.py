@@ -254,7 +254,7 @@ class RouteWorker(threading.Thread):
             previous_retrieve_time = current_retrieve_time
 
             current_predictions = self.get_predictions(stop_tags=stop_tags)
-            current_retrieve_time = utils.get_seconds_since_midnight()
+            current_retrieve_time = time.time()
 
             arrivals = self.get_arrivals(current_predictions=current_predictions,
                                          current_predictions_retrieve_time=current_retrieve_time,
