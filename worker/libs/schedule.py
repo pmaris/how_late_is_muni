@@ -113,7 +113,9 @@ def update_schedule_for_route(route_object):
                     # classes are inserted into the database
                     scheduled_arrivals.append([
                         trip['blockID'],
-                        trip_stop['epochTime']
+                        # Time is returned in milliseconds, convert to seconds to make easier to
+                        # work with
+                        trip_stop['epochTime'] / 1000
                     ])
 
     utils.bulk_insert(table_name=StopScheduleClass._meta.db_table,
@@ -136,6 +138,6 @@ def update_schedule_for_route(route_object):
         scheduled_arrivals[i].append(stop_schedule_class.id)
 
     utils.bulk_insert(table_name=ScheduledArrival._meta.db_table,
-                      column_names=['block_id', 'arrival_time', 'stop_schedule_class_id'],
+                      column_names=['block_id', 'time', 'stop_schedule_class_id'],
                       data=scheduled_arrivals,
                       ignore_duplicates=True)

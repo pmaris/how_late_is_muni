@@ -98,18 +98,18 @@ class ScheduledArrival(models.Model):
     Columns:
         stop_schedule_class: The stop schedule class associated with this arrival.
         block_id: Integer identifying a trip on a route.
-        arrival_time: Timestamp representing milliseconds after the start of the day, indicating
-            when the vehicle is scheduled to arrive at the stop.
+        time: Timestamp representing seconds after the start of the day, indicating when the vehicle
+            is scheduled to arrive at the stop.
     """
 
     stop_schedule_class = models.ForeignKey(StopScheduleClass,
                                             on_delete=models.PROTECT,
                                             related_name='scheduled_arrival')
     block_id = models.IntegerField()
-    arrival_time = models.IntegerField()
+    time = models.IntegerField()
 
     class Meta:
-        unique_together = (('stop_schedule_class', 'block_id', 'arrival_time'),)
+        unique_together = (('stop_schedule_class', 'block_id', 'time'),)
         db_table = 'scheduled_arrival'
 
 class Arrival(models.Model):

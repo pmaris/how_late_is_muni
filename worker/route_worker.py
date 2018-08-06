@@ -188,7 +188,7 @@ class RouteWorker(threading.Thread):
         closest_arrival = None
         for scheduled_arrival in scheduled_arrivals:
             if closest_arrival is None or \
-                    abs(arrival_time - scheduled_arrival.arrival_time) < abs(arrival_time - closest_arrival.arrival_time):
+                    abs(arrival_time - scheduled_arrival.time) < abs(arrival_time - closest_arrival.time):
                 closest_arrival = scheduled_arrival
         return closest_arrival
 
