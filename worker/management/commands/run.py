@@ -9,7 +9,7 @@ from worker.models import Route
 from worker.route_manager import RouteManager
 from worker.route_worker import RouteWorker
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
 #TODO: Clean this up
@@ -47,3 +47,5 @@ class Command(BaseCommand):
                                            agency=config.get('nextbus', 'agency'),
                                            service_class=service_class)
                 route_worker.run()
+
+                LOG.warning('Worker stopped running')

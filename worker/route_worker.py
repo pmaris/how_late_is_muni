@@ -1,4 +1,5 @@
 import configparser
+import datetime
 import logging
 import os.path as path
 import threading
@@ -157,12 +158,16 @@ class RouteWorker(threading.Thread):
             stop_predictions = {}
             for direction in utils.ensure_is_list(stop.get('direction', [])):
                 for prediction in utils.ensure_is_list(direction.get('prediction', [])):
-                    block_id = int(prediction['block'])
-                    if block_id not in stop_predictions:
-                        stop_predictions[block_id] = {}
+                    try:
+                        block_id = int(prediction['block'])
+                    except (ValueError, TypeError):
+                        LOG.info('Block ID %s is not an integer' % prediction['block'])
+                    else:
+                        if block_id not in stop_predictions:
+                            stop_predictions[block_id] = {}
 
-                    stop_predictions[block_id][int(prediction['tripTag'])] = \
-                        int(prediction['seconds'])
+                        stop_predictions[block_id][int(prediction['tripTag'])] = \
+                            int(prediction['seconds'])
 
             prediction_dict[int(stop['stopTag'])] = stop_predictions
 
@@ -287,20 +292,32 @@ class RouteWorker(threading.Thread):
                 as values.
         """
 
+        arrival_date = datetime.datetime.fromtimestamp(arrival_time)
+        arrival_date_start = arrival_date - datetime.timedelta(hours=arrival_date.hour,
+                                                               minutes=arrival_date.minute,
+                                                               seconds=arrival_date.second,
+                                                               microseconds=arrival_date.microsecond)
+        midnight_epoch_arrival = arrival_time - arrival_date_start.timestamp()
+
         for stop_tag, block_ids in arrivals.items():
             for block_id in block_ids:
-                scheduled_arrival = \
-                    self.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
-                                                           block_id=block_id,
-                                                           arrival_time=arrival_time,
-                                                           scheduled_arrivals=scheduled_arrivals[stop_tag][block_id])
+                if block_id in scheduled_arrivals[stop_tag]:
+                    scheduled_arrival = \
+                        self.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
+                                                               block_id=block_id,
+                                                               arrival_time=midnight_epoch_arrival,
+                                                               scheduled_arrivals=scheduled_arrivals[stop_tag][block_id])
 
-                # If there was already an arrival at the same stop for the same scheduled arrival,
-                # consider the two arrivals to be duplicates if they are within a certain threshold,
-                # and update the the arrival time to the current arrival's time.
-                Arrival.objects.update_or_create(stop=scheduled_arrival.stop_schedule_class.stop,
-                                                 scheduled_arrival=scheduled_arrival,
-                                                 time__gte=arrival_time - self.duplicate_arrival_threshold,
-                                                 defaults={
-                                                     'time': arrival_time
-                                                 })
+                    # If there was already an arrival at the same stop for the same scheduled arrival,
+                    # consider the two arrivals to be duplicates if they are within a certain threshold,
+                    # and update the the arrival time to the current arrival's time.
+                    Arrival.objects.update_or_create(stop=scheduled_arrival.stop_schedule_class.stop,
+                                                     scheduled_arrival=scheduled_arrival,
+                                                     time__gte=arrival_time - self.duplicate_arrival_threshold,
+                                                     defaults={
+                                                         'time': arrival_time,
+                                                         'difference': midnight_epoch_arrival - scheduled_arrival.time
+                                                     })
+
+                else:
+                    LOG.warning('Block ID %s is not in scheduled arrivals' % block_id)
