@@ -119,6 +119,9 @@ class Arrival(models.Model):
         stop: The Stop associated with this arrival.
         scheduled_arrival: The Scheduled Arrival associated with this arrival.
         time: Unix timestamp indicating when the vehicle arrived at the stop.
+        difference: Number of seconds between the arrival time and the scheduled arrival. Positive
+            values are arrivals that occurred after the scheduled arrival time, and negative values
+            arrived earlier.
     """
 
     stop = models.ForeignKey(Stop,
@@ -127,6 +130,7 @@ class Arrival(models.Model):
                                           on_delete=models.PROTECT,
                                           related_name='arrival')
     time = models.IntegerField()
+    difference = models.IntegerField()
 
     class Meta:
         unique_together = (('stop', 'scheduled_arrival', 'time'),)
