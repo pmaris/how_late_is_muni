@@ -116,9 +116,7 @@ class TestGetArrivals(unittest.TestCase):
                                        previous_predictions=previous_predictions,
                                        previous_predictions_retrieve_time=12344)
 
-        self.assertEquals(response, {
-            "1234": []
-        })
+        self.assertEquals(response, {})
 
     def test_arrival_returned_if_trip_id_not_in_current_predictions_and_time_below_threshold(
             self, _):
@@ -215,9 +213,7 @@ class TestGetArrivals(unittest.TestCase):
                                        previous_predictions=previous_predictions,
                                        previous_predictions_retrieve_time=12344)
 
-        self.assertEquals(response, {
-            "1234": []
-        })
+        self.assertEquals(response, {})
 
     def test_no_arrivals_returned_if_all_block_ids_and_trip_ids_in_current_predictions(self, _):
         """Test that no arrivals are returned if all block IDs and trip IDs from the previous
@@ -245,9 +241,7 @@ class TestGetArrivals(unittest.TestCase):
                                        previous_predictions=previous_predictions,
                                        previous_predictions_retrieve_time=12344)
 
-        self.assertEquals(response, {
-            "1234": []
-        })
+        self.assertEquals(response, {})
 
 @unittest.mock.patch('worker.route_worker.RouteWorker.__init__', return_value=None)
 class TestGetScheduledArrivalForArrival(unittest.TestCase):
@@ -279,9 +273,9 @@ class TestGetScheduledArrivalForArrival(unittest.TestCase):
 
         arrival_time = 10
         scheduled_arrivals = [
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time - 1),
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time + 1),
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time - 1),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time + 1),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time),
         ]
 
         worker = route_worker.RouteWorker(route_tag='foo',
@@ -302,8 +296,8 @@ class TestGetScheduledArrivalForArrival(unittest.TestCase):
 
         arrival_time = 10
         scheduled_arrivals = [
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time - 1),
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time + 2)
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time - 1),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time + 2)
         ]
 
         worker = route_worker.RouteWorker(route_tag='foo',
@@ -325,8 +319,8 @@ class TestGetScheduledArrivalForArrival(unittest.TestCase):
 
         arrival_time = 10
         scheduled_arrivals = [
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time - 2),
-            unittest.mock.MagicMock(spec=ScheduledArrival, arrival_time=arrival_time + 1)
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time - 2),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time + 1)
         ]
 
         worker = route_worker.RouteWorker(route_tag='foo',
@@ -368,7 +362,7 @@ class TestGetScheduledArrivals(TestCase):
         self.active_scheduled_arrival = \
             ScheduledArrival(stop_schedule_class=self.active_stop_schedule_class,
                              block_id=random.randint(1, 9999),
-                             arrival_time=random.randint(1000, 1000000))
+                             time=random.randint(1000, 1000000))
         self.active_scheduled_arrival.save()
 
         # Setup a ScheduleClass where is_active is False, and a related StopScheduleClass and
@@ -387,7 +381,7 @@ class TestGetScheduledArrivals(TestCase):
         self.inactive_scheduled_arrival = \
             ScheduledArrival(stop_schedule_class=self.inactive_stop_schedule_class,
                              block_id=random.randint(1, 9999),
-                             arrival_time=random.randint(1000, 1000000))
+                             time=random.randint(1000, 1000000))
         self.inactive_scheduled_arrival.save()
 
     def test_arrivals_for_inactive_schedule_classes_not_returned(self):
@@ -412,7 +406,7 @@ class TestGetScheduledArrivals(TestCase):
         second_arrival = \
             ScheduledArrival(stop_schedule_class=self.active_stop_schedule_class,
                              block_id=block_id - 1,
-                             arrival_time=random.randint(1000, 1000000))
+                             time=random.randint(1000, 1000000))
         second_arrival.save()
 
         # Create another scheduled arrival with a different block ID than the one already setup in
@@ -420,7 +414,7 @@ class TestGetScheduledArrivals(TestCase):
         third_arrival = \
             ScheduledArrival(stop_schedule_class=self.active_stop_schedule_class,
                              block_id=block_id + 1,
-                             arrival_time=random.randint(1000, 1000000))
+                             time=random.randint(1000, 1000000))
         third_arrival.save()
 
         worker = route_worker.RouteWorker(route_tag=self.route.tag,
@@ -610,23 +604,34 @@ class TestSaveArrivals(TestCase):
     def test_arrivals_saved_to_database(self, get_scheduled_arrival_for_arrival):
         """Test that the details of the provided arrivals are saved to the database."""
 
-        scheduled_arrivals = [
-            ScheduledArrival(stop_schedule_class=self.stop_schedule_class,
-                             block_id=random.randint(1, 9999),
-                             arrival_time=1234567),
-            ScheduledArrival(stop_schedule_class=self.stop_schedule_class,
-                             block_id=random.randint(1, 9999),
-                             arrival_time=3456789)
-        ]
-        scheduled_arrivals[0].save()
-        scheduled_arrivals[1].save()
+        first_block_id = random.randint(1, 9999)
+        second_block_id = random.randint(1, 9999)
+        first_scheduled_arrival = ScheduledArrival(stop_schedule_class=self.stop_schedule_class,
+                                                   block_id=first_block_id,
+                                                   time=1234567)
+        second_scheduled_arrival = ScheduledArrival(stop_schedule_class=self.stop_schedule_class,
+                                                    block_id=second_block_id,
+                                                    time=3456789)
 
-        get_scheduled_arrival_for_arrival.side_effect = scheduled_arrivals
+        scheduled_arrivals = {
+            self.stop.tag: {
+                first_block_id: [
+                    first_scheduled_arrival
+                ],
+                second_block_id: [
+                    second_scheduled_arrival
+                ]
+            }
+        }
+        first_scheduled_arrival.save()
+        second_scheduled_arrival.save()
+
+        get_scheduled_arrival_for_arrival.side_effect = [first_scheduled_arrival, second_scheduled_arrival]
 
         arrivals = {
             self.stop.tag: [
-                scheduled_arrivals[0].block_id,
-                scheduled_arrivals[1].block_id
+                first_scheduled_arrival.block_id,
+                second_scheduled_arrival.block_id
             ]
         }
         arrival_time = 678910
@@ -641,8 +646,8 @@ class TestSaveArrivals(TestCase):
 
         # Try to get both Arrivals that should have been added to the database
         Arrival.objects.get(stop=self.stop,
-                            scheduled_arrival=scheduled_arrivals[0],
+                            scheduled_arrival=first_scheduled_arrival,
                             time=arrival_time)
         Arrival.objects.get(stop=self.stop,
-                           scheduled_arrival=scheduled_arrivals[1],
+                           scheduled_arrival=second_scheduled_arrival,
                            time=arrival_time)
