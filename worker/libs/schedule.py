@@ -108,15 +108,20 @@ def update_schedule_for_route(route_object):
                         order
                     ])
 
+                    # Time is returned in milliseconds, convert to seconds to make easier to
+                    # work with
+                    arrival_time = trip_stop['epochTime'] / 1000
+
+                    # Arrivals after midnight that are part of the same service day have timestamps
+                    # that are greater than 24 hours from the midnight epoch. In this case, remove
+                    # 24 hours from the timestamp to simplify comparisons.
+                    if arrival_time >= 60 * 60 * 24:
+                        arrival_time -= 60 * 60 * 24
+
                     # Add details for the scheduled arrivals that can be added now. The ID of the
                     # stop schedule class will be appended to the data once the stop schedule
                     # classes are inserted into the database
-                    scheduled_arrivals.append([
-                        trip['blockID'],
-                        # Time is returned in milliseconds, convert to seconds to make easier to
-                        # work with
-                        trip_stop['epochTime'] / 1000
-                    ])
+                    scheduled_arrivals.append([trip['blockID'], arrival_time])
 
     utils.bulk_insert(table_name=StopScheduleClass._meta.db_table,
                       column_names=['stop_id', 'schedule_class_id', 'stop_order'],

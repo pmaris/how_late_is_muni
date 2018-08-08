@@ -191,10 +191,16 @@ class RouteWorker(threading.Thread):
         """
 
         closest_arrival = None
+        closest_difference = None
         for scheduled_arrival in scheduled_arrivals:
-            if closest_arrival is None or \
-                    abs(arrival_time - scheduled_arrival.time) < abs(arrival_time - closest_arrival.time):
+            difference = min([abs(arrival_time - scheduled_arrival.time),
+                              # If arrival is before midnight and closest arrival is after midnight
+                              abs(arrival_time - scheduled_arrival.time - (60 * 60 * 24)),
+                              # If arrival is after midnight and closest arrival is before midnight
+                              abs(arrival_time - (scheduled_arrival.time - (60 * 60 * 24)))])
+            if closest_difference is  None or difference < closest_difference:
                 closest_arrival = scheduled_arrival
+                closest_difference = difference
         return closest_arrival
 
     def get_scheduled_arrivals(self, service_class):

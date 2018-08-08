@@ -332,6 +332,54 @@ class TestGetScheduledArrivalForArrival(unittest.TestCase):
                                                             scheduled_arrivals=scheduled_arrivals)
         self.assertEquals(response, scheduled_arrivals[1])
 
+    def test_time_after_midnight_returned(self, _):
+        """Test that when an arrival time is just before midnight and the closest scheduled arrival
+        is after midnight, the correct scheduled arrival is returned."""
+
+        stop_tag = 'buz'
+        block_id = 1234
+
+        # Time right before midnight
+        arrival_time = (60 * 60 * 24) - 1
+        scheduled_arrivals = [
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=60),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time - 120),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=15)
+        ]
+
+        worker = route_worker.RouteWorker(route_tag='foo',
+                                          agency='bar',
+                                          service_class='baz')
+        response = worker.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
+                                                            block_id=block_id,
+                                                            arrival_time=arrival_time,
+                                                            scheduled_arrivals=scheduled_arrivals)
+        self.assertEquals(response, scheduled_arrivals[2])
+
+    def test_time_before_midnight_returned(self, _):
+        """Test that when an arrival time is just after midnight and the closest scheduled arrival
+        is before midnight, the correct scheduled arrival is returned."""
+
+        stop_tag = 'buz'
+        block_id = 1234
+
+        # Time right after midnight
+        arrival_time = 1
+        scheduled_arrivals = [
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=120),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=(60 * 60 * 24) - 60),
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=(60 * 60 * 24) - 120)
+        ]
+
+        worker = route_worker.RouteWorker(route_tag='foo',
+                                          agency='bar',
+                                          service_class='baz')
+        response = worker.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
+                                                            block_id=block_id,
+                                                            arrival_time=arrival_time,
+                                                            scheduled_arrivals=scheduled_arrivals)
+        self.assertEquals(response, scheduled_arrivals[1])
+
 class TestGetScheduledArrivals(TestCase):
     """Tests for the get_scheduled_arrivals method in the RouteWorker class."""
 
