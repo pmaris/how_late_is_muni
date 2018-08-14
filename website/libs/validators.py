@@ -21,7 +21,7 @@ def validate_boolean(value):
         return value
     elif str(value).lower() in ['true', 't', '1']:
         return True
-    elif str(value).lower() in ['false', 't', '0']:
+    elif str(value).lower() in ['false', 'f', '0']:
         return False
     else:
         raise ValidationError(message='Invalid boolean value: %(value)s',
@@ -44,7 +44,7 @@ def validate_choice(value, valid_choices):
     if value in valid_choices:
         return value
     else:
-        raise ValidationError(message='Invalid value %(value)s, valid values are: %(choices)s',
+        raise ValidationError(message='Invalid value %(value)s, valid values are: %(valid_choices)s',
                               params={'value': value,
                                       'valid_choices': valid_choices})
 
