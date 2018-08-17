@@ -5,6 +5,7 @@ import os.path as path
 import threading
 import time
 
+import how_late_is_muni.settings as settings
 from worker.libs import route, schedule, utils
 from worker.models import Route
 from worker.route_worker import RouteWorker
@@ -14,9 +15,7 @@ from py_nextbus import NextBusClient
 LOG = logging.getLogger()
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.abspath(__file__))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 class RouteManager(object):
 

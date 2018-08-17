@@ -5,15 +5,14 @@ import logging
 import os.path as path
 import py_nextbus
 
+import how_late_is_muni.settings as settings
 from worker.models import Stop
 from worker.libs import utils
 
 log = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file__)))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 def add_stops_for_route_to_database(stops, route_object):
     """Add all of the stops for a route to the database.

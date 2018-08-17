@@ -11,15 +11,14 @@ import os.path as path
 
 from django.core.management.base import BaseCommand, CommandError
 
+import how_late_is_muni.settings as settings
 from worker.libs import route, schedule
 from worker.models import Route, ScheduleClass
 
 log = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 class Command(BaseCommand):
     help = 'Update schedules stored in the database. If the --route argument is not provided, all '\

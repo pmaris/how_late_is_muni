@@ -4,6 +4,7 @@ import os.path as path
 
 from django.core.management.base import BaseCommand, CommandError
 
+import how_late_is_muni.settings as settings
 import worker.libs.utils as utils
 from worker.models import Route
 from worker.route_manager import RouteManager
@@ -12,9 +13,7 @@ from worker.route_worker import RouteWorker
 LOG = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.dirname(path.dirname(path.abspath(__file__))))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 class Command(BaseCommand):
     help = 'Run the worker to get arrivals'

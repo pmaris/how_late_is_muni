@@ -6,15 +6,14 @@ import logging
 import os.path as path
 import py_nextbus
 
+import how_late_is_muni.settings as settings
 from worker.libs import utils, stop, schedule
 from worker.models import Route, ScheduleClass
 
 log = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file__)))),
-                      'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 def add_routes_to_database(routes):
     """Add a list of routes retrieved from the NextBus API to the database.

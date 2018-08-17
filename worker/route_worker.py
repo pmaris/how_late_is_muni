@@ -7,15 +7,14 @@ import time
 
 import py_nextbus
 
+import how_late_is_muni.settings as settings
 from worker.models import Arrival, Route, ScheduleClass, ScheduledArrival, Stop
 import worker.libs.utils as utils
 
 LOG = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.abspath(__file__))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 class RouteWorker(threading.Thread):
     """Class to manage the predictions and arrivals for a single route."""

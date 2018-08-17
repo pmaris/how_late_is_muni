@@ -4,15 +4,14 @@ import configparser
 import logging
 import os.path as path
 
+import how_late_is_muni.settings as settings
 from worker.models import ScheduledArrival, ScheduleClass, Stop, StopScheduleClass
 from worker.libs import route, stop, utils
 
 LOG = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
-#TODO: Clean this up
-config.read(path.join(path.dirname(path.dirname(path.dirname(path.abspath(__file__)))),
-            'config.ini'))
+config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
 def update_schedule_for_route(route_object):
     """Update the schedule stored in the database for a single route.
