@@ -380,6 +380,56 @@ class TestGetScheduledArrivalForArrival(unittest.TestCase):
                                                             scheduled_arrivals=scheduled_arrivals)
         self.assertEquals(response, scheduled_arrivals[1])
 
+    @unittest.mock.patch('worker.route_worker.config.get', autospec=True)
+    def test_arrival_returned_if_block_id_has_one_scheduled_arrival_and_time_within_threshold(
+        self, config_get, _):
+        """Test that if there is only one scheduled arrival for the block ID and stop, that
+        scheduled arrival is returned if the difference between the scheduled arrival time and the
+        actual arrival time is less than the threshold for counting arrivals at stops with only one
+        scheduled arrival for the block ID."""
+
+        threshold = 100
+        config_get.return_value = threshold
+
+        arrival_time = 1000
+        scheduled_arrivals = [
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time + threshold - 1)
+        ]
+
+        worker = route_worker.RouteWorker(route_tag='foo',
+                                          agencey='bar',
+                                          service_class='baz')
+        response = worker.get_scheduled_arrival_for_arrival(stop_tag='buz',
+                                                            block_id=1234,
+                                                            arrival_time=arrival_time,
+                                                            scheduled_arrivals=scheduled_arrivals)
+        self.assertEquals(response, scheduled_arrivals[0])
+
+    @unittest.mock.patch('worker.route_worker.config.get', autospec=True)
+    def test_none_returned_if_block_id_has_one_scheduled_arrival_and_time_greater_than_threshold(
+        self, config_get, _):
+        """Test that if there is only one scheduled arrival for the block ID and stop, None is
+        returned if the difference between the scheduled arrival time and the actual arrival time
+        is higher than the threshold for counting arrivals at stops with only one scheduled arrival
+        for the block ID."""
+
+        threshold = 100
+        config_get.return_value = threshold
+
+        arrival_time = 1000
+        scheduled_arrivals = [
+            unittest.mock.MagicMock(spec=ScheduledArrival, time=arrival_time + threshold + 1)
+        ]
+
+        worker = route_worker.RouteWorker(route_tag='foo',
+                                          agencey='bar',
+                                          service_class='baz')
+        response = worker.get_scheduled_arrival_for_arrival(stop_tag='buz',
+                                                            block_id=1234,
+                                                            arrival_time=arrival_time,
+                                                            scheduled_arrivals=scheduled_arrivals)
+        self.assertIsNone(response)
+
 class TestGetScheduledArrivals(TestCase):
     """Tests for the get_scheduled_arrivals method in the RouteWorker class."""
 

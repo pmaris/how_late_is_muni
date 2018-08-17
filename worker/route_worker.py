@@ -190,6 +190,18 @@ class RouteWorker(threading.Thread):
             block.
         """
 
+        # Some stops only have one scheduled arrival time for a block ID even if there are multiple
+        # trips for the block ID that serve the stop, when there is a trip that begins or ends at
+        # the stop. To avoid every arrival throughout the day from being compared to the single
+        # scheduled arrival time, the arrival will only be compared to the single arrival time if
+        # the arrival is within a threshold.
+        if len(scheduled_arrivals) == 1:
+            if abs(arrival_time - scheduled_arrivals[0].time) <= \
+                    (config.get('worker', 'single_scheduled_arrival_threshold')):
+                return scheduled_arrivals[0]
+            else:
+                return None
+
         closest_arrival = None
         closest_difference = None
         for scheduled_arrival in scheduled_arrivals:
