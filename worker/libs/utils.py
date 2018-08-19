@@ -76,11 +76,11 @@ def get_current_service_class():
         if the current day is Saturday, and "sun" if the current day is Sunday.
     """
 
-    current_day = datetime.datetime.now().strftime('%A')
+    current_day = datetime.datetime.now().strftime('%A').lower()
 
-    if current_day == 'Saturday':
+    if current_day == 'saturday':
         return 'sat'
-    elif current_day == 'Sunday':
+    elif current_day == 'sunday':
         return 'sun'
     else:
         return 'wkd'
