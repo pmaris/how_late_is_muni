@@ -98,11 +98,15 @@ def update_schedule_for_route(route_object):
                 # Skip stops with an arrival time of -1, which indicates that the stop
                 # is not scheduled for that trip
                 if trip_stop['epochTime'] != -1:
-                    # Get the stop for the arrival, without querying the database
-                    db_stop = [stop for stop in route_stops if stop.tag == trip_stop['tag']][0]
+                    # Get the stop for the arrival, without querying the database. If the stop for
+                    # the arrival isn't one of the stops retrieved from the database, don't add the
+                    # arrival to the database.
+                    db_stop = [stop for stop in route_stops if stop.tag == trip_stop['tag']]
+                    if not db_stop:
+                        continue
 
                     stop_schedule_classes.append([
-                        db_stop.id,
+                        db_stop[0].id,
                         schedule_class_object.id,
                         order
                     ])

@@ -31,21 +31,20 @@ def add_stops_for_route_to_database(stops, route_object):
     stop_list = []
     for stop in stops:
         if stop['tag'] in stop_coordinates:
-            latitude = stop_coordinates[stop['tag']]['latitude']
-            longitude = stop_coordinates[stop['tag']]['longitude']
+            stop_list.append([
+                route_object.id,
+                stop['tag'],
+                stop['name'],
+                stop_coordinates[stop['tag']]['latitude'],
+                stop_coordinates[stop['tag']]['longitude']
+            ])
+
         else:
             log.warning('Could not get coordinates for stop %s in in schedule for route %s',
                         stop['tag'], route_object.tag)
             latitude = None
             longitude = None
 
-        stop_list.append([
-            route_object.id,
-            stop['tag'],
-            stop['name'],
-            latitude,
-            longitude
-        ])
 
     utils.bulk_insert(table_name=Stop._meta.db_table,
                       column_names=['route_id', 'tag', 'title', 'latitude', 'longitude'],
