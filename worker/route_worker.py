@@ -36,10 +36,10 @@ class RouteWorker(threading.Thread):
         self.route = Route.objects.get(tag=route_tag)
         self.service_class = service_class
 
-        self.stops =  Stop.objects.filter(route=self.route,
-                                          stop_schedule_class__schedule_class__service_class=service_class,
-                                          stop_schedule_class__schedule_class__is_active=True,
-                                          stop_schedule_class__schedule_class__route=self.route)
+        self.stops = Stop.objects.filter(route=self.route,
+                                         stop_schedule_class__schedule_class__service_class=service_class,
+                                         stop_schedule_class__schedule_class__is_active=True,
+                                         stop_schedule_class__schedule_class__route=self.route)
 
         self.nextbus_client = py_nextbus.NextBusClient(output_format='json',
                                                        agency=agency)
@@ -196,7 +196,7 @@ class RouteWorker(threading.Thread):
         # the arrival is within a threshold.
         if len(scheduled_arrivals) == 1:
             if abs(arrival_time - scheduled_arrivals[0].time) <= \
-                    (config.get('worker', 'single_scheduled_arrival_threshold')):
+                    (int(config.get('worker', 'single_scheduled_arrival_threshold'))):
                 return scheduled_arrivals[0]
             else:
                 return None
@@ -318,23 +318,27 @@ class RouteWorker(threading.Thread):
 
         for stop_tag, block_ids in arrivals.items():
             for block_id in block_ids:
-                if block_id in scheduled_arrivals[stop_tag]:
+                if stop_tag in scheduled_arrivals and block_id in scheduled_arrivals[stop_tag]:
                     scheduled_arrival = \
                         self.get_scheduled_arrival_for_arrival(stop_tag=stop_tag,
                                                                block_id=block_id,
                                                                arrival_time=midnight_epoch_arrival,
                                                                scheduled_arrivals=scheduled_arrivals[stop_tag][block_id])
 
-                    # If there was already an arrival at the same stop for the same scheduled arrival,
-                    # consider the two arrivals to be duplicates if they are within a certain threshold,
-                    # and update the the arrival time to the current arrival's time.
-                    Arrival.objects.update_or_create(stop=scheduled_arrival.stop_schedule_class.stop,
-                                                     scheduled_arrival=scheduled_arrival,
-                                                     time__gte=arrival_time - self.duplicate_arrival_threshold,
-                                                     defaults={
-                                                         'time': arrival_time,
-                                                         'difference': midnight_epoch_arrival - scheduled_arrival.time
-                                                     })
-
+                    # Only save arrivals that can be associated with a scheduled arrival
+                    if scheduled_arrival is not None:
+                        # If there was already an arrival at the same stop for the same scheduled
+                        # arrival, consider the two arrivals to be duplicates if they are within a
+                        # certain threshold, and update the the arrival time to the current
+                        # arrival's time.
+                        Arrival.objects.update_or_create(
+                            stop=scheduled_arrival.stop_schedule_class.stop,
+                            scheduled_arrival=scheduled_arrival,
+                            time__gte=arrival_time - self.duplicate_arrival_threshold,
+                            defaults={
+                                'time': arrival_time,
+                                'difference': midnight_epoch_arrival - scheduled_arrival.time
+                            }
+                        )
                 else:
                     LOG.warning('Block ID %s is not in scheduled arrivals' % block_id)

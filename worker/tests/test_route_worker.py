@@ -724,7 +724,8 @@ class TestSaveArrivals(TestCase):
         first_scheduled_arrival.save()
         second_scheduled_arrival.save()
 
-        get_scheduled_arrival_for_arrival.side_effect = [first_scheduled_arrival, second_scheduled_arrival]
+        get_scheduled_arrival_for_arrival.side_effect = \
+            [first_scheduled_arrival, second_scheduled_arrival]
 
         arrivals = {
             self.stop.tag: [
@@ -749,3 +750,36 @@ class TestSaveArrivals(TestCase):
         Arrival.objects.get(stop=self.stop,
                            scheduled_arrival=second_scheduled_arrival,
                            time=arrival_time)
+
+    def test_arrival_not_saved_if_scheduled_arrival_does_not_exist(
+            self, get_scheduled_arrival_for_arrival):
+        """Test that arrivals are not saved to the database if no scheduled arrival time could be
+        found for an arrival."""
+
+        get_scheduled_arrival_for_arrival.return_value = None
+        stop_tag = 1234
+        block_id = 5678
+        arrivals = {
+            stop_tag: [
+                block_id
+            ]
+        }
+        scheduled_arrivals = {
+            stop_tag: {
+                block_id: [
+                    unittest.mock.MagicMock()
+                ],
+            }
+        }
+
+        num_arrivals_before = Arrival.objects.count()
+
+        worker = route_worker.RouteWorker(route_tag=self.route.tag,
+                                          agency='foo',
+                                          service_class='bar')
+
+        worker.save_arrivals(arrivals=arrivals,
+                             arrival_time=678910,
+                             scheduled_arrivals=scheduled_arrivals)
+
+        self.assertEquals(Arrival.objects.count(), num_arrivals_before)
