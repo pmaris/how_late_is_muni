@@ -91,7 +91,10 @@ class RouteManager(object):
 
         # Check if there are any new routes
         routes = route.get_routes(self.agency)
-        route.add_routes_to_database(routes)
+        utils.bulk_upsert(model=Route,
+                          data=routes,
+                          update_on_conflict=True,
+                          conflict_columns=['tag'])
 
         threads = []
         for r in routes:

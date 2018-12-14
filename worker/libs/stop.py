@@ -31,13 +31,13 @@ def add_stops_for_route_to_database(stops, route_object):
     stop_list = []
     for stop in stops:
         if stop['tag'] in stop_coordinates:
-            stop_list.append([
-                route_object.id,
-                stop['tag'],
-                stop['name'],
-                stop_coordinates[stop['tag']]['latitude'],
-                stop_coordinates[stop['tag']]['longitude']
-            ])
+            stop_list.append({
+                'route': route_object,
+                'tag': stop['tag'],
+                'title': stop['name'],
+                'latitude': stop_coordinates[stop['tag']]['latitude'],
+                'longitude': stop_coordinates[stop['tag']]['longitude']
+            })
 
         else:
             log.warning('Could not get coordinates for stop %s in in schedule for route %s',
@@ -45,11 +45,10 @@ def add_stops_for_route_to_database(stops, route_object):
             latitude = None
             longitude = None
 
-
-    utils.bulk_insert(table_name=Stop._meta.db_table,
-                      column_names=['route_id', 'tag', 'title', 'latitude', 'longitude'],
-                      update_columns=['route_id', 'title', 'latitude', 'longitude'],
-                      data=stop_list)
+    utils.bulk_upsert(model=Stop,
+                      data=stop_list,
+                      update_on_conflict=True,
+                      conflict_columns=['tag'])
 
 def get_stop_coordinates_for_route(route_tag):
     """Get the latitude and longitude of all of the stops on a route.

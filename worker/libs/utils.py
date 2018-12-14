@@ -1,6 +1,34 @@
 import datetime
 
 from django.db import connection
+from psqlextra.query import ConflictAction
+from psqlextra.util import postgres_manager
+
+def bulk_upsert(model, data, update_on_conflict, conflict_columns):
+    """Perform a bulk upsert for a single database model that can either update
+    or ignore entries that conflict with existing rows in the database.
+
+    Arguments:
+        model: (django.db.models.Model) The database model to perform the insert
+            on.
+        data: (List of dictionaries) The data to insert into the database. Each
+            dictionary must have keys matching the name of a field on the
+            database model with the values being the data to add for that
+            column. All of the dictionaries must have the same keys.
+        update_on_conflict: (Boolean) Indicates whether rows where a conflict
+            occurs should be updated or not.
+        conflict_columns: (List of strings) Names of the columns/fields on the
+            model with unique constraints to be the columns part of the
+            ON CONFLICT cause.
+    """
+
+    if update_on_conflict:
+        conflict_action = ConflictAction.UPDATE
+    else:
+        conflict_action = ConflictAction.NOTHING
+
+    with postgres_manager(model) as manager:
+        manager.on_conflict(conflict_columns, conflict_action).bulk_insert(data)
 
 def ensure_is_list(value):
     """Guarantee that a given value is returned as a list. If the value is not a list, a list
@@ -22,51 +50,6 @@ def ensure_is_list(value):
         return value
     else:
         return [value]
-
-def bulk_insert(table_name, column_names, data, update_columns=None, ignore_duplicates=False):
-    """Perform a bulk insert into a table in the database with an ON DUPLICATE KEY UPDATE, which is
-    not supported by Django's bulk_create method.
-
-    Arguments:
-        table_name: (String) Name of the database table to insert the data in to.
-        column_names: (List of strings) List of names of the columns to insert values into.
-        data: (Nested lists) List containing lists of each row of data to insert into the database,
-            with the data for each column being in the same order as the names of the columns in the
-            provided column_names list.
-        update_columns: (List of strings) Names of the columns to update in the ON DUPLICATE KEY
-            UPDATE clause. If this is None, the ON DUPLICATE KEY UPDATE clause will not be added to
-            the SQL statement that is executed.
-        ignore_duplicates: (Boolean) Indicates if the IGNORE modifier should be used to ignore
-            errors that occur with the insert.
-    """
-
-    # Construct column names to insert the data into
-    columns = ','.join(['`%s`' % column_name for column_name in column_names])
-
-    # Construct the insert for a single row with the necessary number of parameters
-    parameterized_row = '(%s)' % ','.join(['%s'] * len(column_names))
-
-    # Construct parameterized inserts for each row of data to insert
-    parameterized_rows = ','.join([parameterized_row] * len(data))
-
-    # Construct the columns to update on the duplicate key condition
-    if update_columns is not None:
-        update_clause = 'ON DUPLICATE KEY UPDATE %s' % \
-                        ','.join(['`%s`=VALUES(`%s`)' % (column, column) for column in update_columns])
-    else:
-        update_clause = ''
-
-    if ignore_duplicates:
-        insert_statement = 'INSERT IGNORE INTO '
-    else:
-        insert_statement = 'INSERT INTO '
-
-    sql = '%s `%s` (%s) VALUES %s %s' % (insert_statement, table_name, columns, parameterized_rows,
-                                         update_clause)
-    params = [item for column in data for item in column]
-
-    with connection.cursor() as cursor:
-        cursor.execute(sql, params)
 
 def get_current_service_class():
     """Get the service class for the current day/

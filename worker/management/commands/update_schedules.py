@@ -12,7 +12,7 @@ import os.path as path
 from django.core.management.base import BaseCommand, CommandError
 
 import how_late_is_muni.settings as settings
-from worker.libs import route, schedule
+from worker.libs import route, schedule, utils
 from worker.models import Route, ScheduleClass
 
 log = logging.getLogger(__name__)
@@ -43,7 +43,11 @@ class Command(BaseCommand):
             ScheduleClass.objects.all().update(is_active=False)
 
             routes = route.get_routes(agency)
-            route.add_routes_to_database(routes)
+            utils.bulk_upsert(model=Route,
+                              data=routes,
+                              update_on_conflict=True,
+                              conflict_columns=['tag'])
+
             for r in routes:
                 schedule.update_schedule_for_route(Route.objects.get(tag=r['tag']))
 
@@ -54,7 +58,7 @@ class Command(BaseCommand):
             # Check if provided route is an existing route for the agency
             matching_route = list(filter(lambda r: r['tag'] == options['route_tag'], routes))
             if matching_route:
-                route.add_routes_to_database(matching_route)
+                Route.objects.update_or_create(matching_route)
                 route_object = Route.objects.get(tag=options['route_tag'])
 
                 schedule.update_schedule_for_route(route_object)

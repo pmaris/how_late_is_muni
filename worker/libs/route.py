@@ -15,20 +15,6 @@ log = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 config.read(path.join(settings.BASE_DIR, 'config.ini'))
 
-def add_routes_to_database(routes):
-    """Add a list of routes retrieved from the NextBus API to the database.
-
-    Arguments:
-        routes: List of dictionaries for each route containing the following keys:
-            tag: String, short name of the route, eg, "38R".
-            title: String, title of the route, eg, "38R-Geary Rapid".
-    """
-
-    utils.bulk_insert(table_name=Route._meta.db_table,
-                      column_names=['tag', 'title'],
-                      update_columns=['title'],
-                      data=[[route['tag'], route['title']] for route in routes])
-
 def get_routes(agency):
     """Get all existing routes on NextBus for a transit agency.
 
@@ -112,10 +98,10 @@ def get_route_schedule(route_tag):
                         'tag': int(trip_stop['tag']),
                         'time': None
                     })
-                arrivals.append({
-                    'stops': stops,
-                    'blockID': int(trip['blockID'])
-                })
+            arrivals.append({
+                'stops': stops,
+                'blockID': int(trip['blockID'])
+            })
 
         stops = []
         for header_stop in utils.ensure_is_list(route_schedule['header']['stop']):

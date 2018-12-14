@@ -25,7 +25,7 @@ class Stop(models.Model):
         longitude: Longitude of the stop's location.
     """
 
-    tag = models.IntegerField(db_index=True)
+    tag = models.IntegerField(db_index=True, unique=True)
     title = models.TextField(max_length=50)
     route = models.ForeignKey(Route,
                               on_delete=models.PROTECT,

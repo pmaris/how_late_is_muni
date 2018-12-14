@@ -4,12 +4,22 @@ This project is a complete refactor from the ground up of a project I previously
 
 Getting started
 ---
+
+### Dependencies
 First, install prerequisites:
-- MySQL server
+- PostgrSQL
 - Python >= 3.6
 - Pip
 
-Then, install dependencies with the command `pip install -r <repository path>/requirements.txt`
+### Setup
+1. In Postgres, create the `muni` database and `muni` user, with a password of your choosing.
+2. Create a [https://www.postgresql.org/docs/9.3/libpq-pgpass.html](`.pgpass` file ) in `$HOME/.pgpass`. Use a wildcard (`*`) for the database name, `muni` for the username, and the password you chose. For example: `*:*:*:muni:<your password>`
+3. Install project dependencies: `pip3 install -r requirements.txt`
+4. Create the database tables: `python3 manage.py migrate`
+5. Add the current schedules to the database: `python3 manage.py update_schedules`
+
+### Running the worker
+You can run the worker with the command `python3 manage.py run`
 
 Commands
 ---
@@ -20,7 +30,7 @@ Update the schedules stored in the database, for either all routes or only a sin
 
 **Command:**
 
-`python <repository path>/manage.py update_schedules`
+`python3 <repository path>/manage.py update_schedules`
 
 **Arguments:**
 
@@ -31,7 +41,7 @@ Run the worker to track and add arrivals to the database, for either all routes 
 
 **Command:**
 
-`python <repository path>/manage.py run`
+`python3 <repository path>/manage.py run`
 
 **Arguments:**
 

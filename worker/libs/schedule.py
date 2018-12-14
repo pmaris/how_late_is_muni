@@ -71,7 +71,8 @@ def update_schedule_for_route(route_object):
     route_stops = Stop.objects.filter(route=route_object)
 
     schedule_classes = []
-    stop_schedule_classes = []
+    stop_schedule_classes = set()
+    stop_schedule_class_dicts = []
     scheduled_arrivals = []
 
     for schedule_class in schedules_to_add:
@@ -105,11 +106,15 @@ def update_schedule_for_route(route_object):
                     if not db_stop:
                         continue
 
-                    stop_schedule_classes.append([
-                        db_stop[0].id,
-                        schedule_class_object.id,
-                        order
-                    ])
+                    stop_schedule_class = {
+                        'stop_id': db_stop[0].id,
+                        'schedule_class_id': schedule_class_object.id,
+                        'stop_order': order
+                    }
+
+                    if (db_stop[0].id, schedule_class_object.id) not in stop_schedule_classes:
+                        stop_schedule_classes.add((db_stop[0].id, schedule_class_object.id))
+                        stop_schedule_class_dicts.append(stop_schedule_class)
 
                     # Time is returned in milliseconds, convert to seconds to make easier to
                     # work with
@@ -121,31 +126,39 @@ def update_schedule_for_route(route_object):
                     if arrival_time >= 60 * 60 * 24:
                         arrival_time -= 60 * 60 * 24
 
-                    # Add details for the scheduled arrivals that can be added now. The ID of the
-                    # stop schedule class will be appended to the data once the stop schedule
-                    # classes are inserted into the database
-                    scheduled_arrivals.append([trip['blockID'], arrival_time])
+                    # Add details for the scheduled arrivals that can be added now. The details of
+                    # the stop schedule class will be used to lookup the stop schedule class in
+                    # the database before adding the scheduled arrival to the database.
+                    scheduled_arrivals.append({
+                        'block_id': trip['blockID'],
+                        'time': arrival_time,
+                        'stop_schedule_class_dict': stop_schedule_class
+                    })
 
-    utils.bulk_insert(table_name=StopScheduleClass._meta.db_table,
-                      column_names=['stop_id', 'schedule_class_id', 'stop_order'],
-                      data=stop_schedule_classes,
-                      ignore_duplicates=True)
+    utils.bulk_upsert(model=StopScheduleClass,
+                      data=stop_schedule_class_dicts,
+                      update_on_conflict=False,
+                      conflict_columns=['stop_id', 'schedule_class_id', 'stop_order'])
 
     stop_schedule_class_objects = \
         StopScheduleClass.objects.filter(schedule_class__in=schedule_classes,
                                          stop__in=route_stops)
 
-    # Go back through all of the stop schedule classes that were added to bulk insert all of the
-    # scheduled arrivals for them
-    for i, stop_schedule_class_data in enumerate(stop_schedule_classes):
-        stop_id, schedule_class_id, order = stop_schedule_class_data
-        stop_schedule_class = \
-            [ssc for ssc in stop_schedule_class_objects if ssc.stop_id == stop_id and \
-                                                           ssc.schedule_class_id == schedule_class_id and \
-                                                           ssc.stop_order == order][0]
-        scheduled_arrivals[i].append(stop_schedule_class.id)
+    for scheduled_arrival in scheduled_arrivals:
+        stop_schedule_class = scheduled_arrival.pop('stop_schedule_class_dict')
 
-    utils.bulk_insert(table_name=ScheduledArrival._meta.db_table,
-                      column_names=['block_id', 'time', 'stop_schedule_class_id'],
-                      data=scheduled_arrivals,
-                      ignore_duplicates=True)
+        scheduled_arrival['stop_schedule_class'] = \
+            [ssc for ssc in stop_schedule_class_objects if \
+                ssc.stop_id == stop_schedule_class['stop_id'] and \
+                ssc.schedule_class_id == stop_schedule_class['schedule_class_id'] and \
+                ssc.stop_order == stop_schedule_class['stop_order']][0]
+
+    # Remove possible duplicate arrivals
+    unique_scheduled_arrivals = []
+    for scheduled_arrival in scheduled_arrivals:
+        if scheduled_arrival not in unique_scheduled_arrivals:
+            unique_scheduled_arrivals.append(scheduled_arrival)
+    utils.bulk_upsert(model=ScheduledArrival,
+                      data=unique_scheduled_arrivals,
+                      update_on_conflict=False,
+                      conflict_columns=['stop_schedule_class_id', 'block_id', 'time'])
