@@ -4,6 +4,7 @@ import logging
 import os.path as path
 import threading
 import time
+from urllib.error import URLError
 
 import py_nextbus
 
@@ -276,7 +277,13 @@ class RouteWorker(threading.Thread):
             previous_predictions = current_predictions
             previous_retrieve_time = current_retrieve_time
 
-            current_predictions = self.get_predictions(stop_tags=stop_tags)
+            try:
+                current_predictions = self.get_predictions(stop_tags=stop_tags)
+            except URLError:
+                LOG.exception('Failed to get arrival predictions due to exception')
+                time.sleep(self.update_frequency)
+                continue
+
             current_retrieve_time = time.time()
 
             arrivals = self.get_arrivals(current_predictions=current_predictions,
