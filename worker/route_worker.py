@@ -160,7 +160,7 @@ class RouteWorker(threading.Thread):
                     try:
                         block_id = int(prediction['block'])
                     except (ValueError, TypeError):
-                        LOG.info('Block ID %s is not an integer' % prediction['block'])
+                        LOG.info('Block ID %s is not an integer', prediction['block'])
                     else:
                         if block_id not in stop_predictions:
                             stop_predictions[block_id] = {}
@@ -271,7 +271,7 @@ class RouteWorker(threading.Thread):
         stop_tags = [stop.tag for stop in self.stops]
 
         current_predictions = {}
-        current_retrieve_time = 0
+        current_retrieve_time = time.time()
         while self.running:
             previous_predictions = current_predictions
             previous_retrieve_time = current_retrieve_time
@@ -284,7 +284,11 @@ class RouteWorker(threading.Thread):
                                          previous_predictions=previous_predictions,
                                          previous_predictions_retrieve_time=previous_retrieve_time)
 
-            if arrivals:
+            if current_retrieve_time - previous_retrieve_time > self.update_frequency * 3:
+                LOG.warning('Predictions have not been updated in %d seconds, arrivals will be inaccurate and will not be saved',
+                            current_retrieve_time - previous_retrieve_time)
+
+            elif arrivals:
                 self.save_arrivals(arrivals=arrivals,
                                    arrival_time=current_retrieve_time,
                                    scheduled_arrivals=scheduled_arrivals)
