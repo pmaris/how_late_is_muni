@@ -7,13 +7,13 @@ Getting started
 
 ### Dependencies
 First, install prerequisites:
-- PostgrSQL
+- PostgreSQL
 - Python >= 3.6
 - Pip
 
 ### Setup
 1. In Postgres, create the `muni` database and `muni` user, with a password of your choosing.
-2. Create a [https://www.postgresql.org/docs/9.3/libpq-pgpass.html](`.pgpass` file ) in `$HOME/.pgpass`. Use a wildcard (`*`) for the database name, `muni` for the username, and the password you chose. For example: `*:*:*:muni:<your password>`
+2. Create a [`.pgpass` file](https://www.postgresql.org/docs/9.3/libpq-pgpass.html) in `$HOME/.pgpass`. Use a wildcard (`*`) for the database name, `muni` for the username, and the password you chose. For example: `*:*:*:muni:<your password>`
 3. Install project dependencies: `pip3 install -r requirements.txt`
 4. Create the database tables: `python3 manage.py migrate`
 5. Add the current schedules to the database: `python3 manage.py update_schedules`
