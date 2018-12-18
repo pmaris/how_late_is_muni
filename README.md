@@ -11,8 +11,6 @@ First, install prerequisites:
 - Python >= 3.6
 - Pip
 
-1. Install [Docker CE](https://docs.docker.com/install/)
-
 ### Setup
 1. In Postgres, create the `muni` database and `muni` user, with a password of your choosing.
 2. Create a [`.pgpass` file](https://www.postgresql.org/docs/9.3/libpq-pgpass.html) in `$HOME/.pgpass`. Use a wildcard (`*`) for the database name, `muni` for the username, and the password you chose. For example: `*:*:*:muni:<your password>`
