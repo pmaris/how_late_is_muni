@@ -67,8 +67,10 @@ WSGI_APPLICATION = 'how_late_is_muni.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'psqlextra.backend',
-        'NAME': 'muni',
-        'USER': 'muni',
+        'NAME': os.environ['POSTGRES_DB'],
+        'USER': os.environ['POSTGRES_USER'],
+        'PASSWORD': os.environ['POSTGRES_PASSWORD'],
+        'HOST': os.environ['DATABASE_CONTAINER'],
     }
 }
 

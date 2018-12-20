@@ -1,5 +1,5 @@
-# DB configuration
-my.cnf
+# Environment variable configuration
+db_config.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

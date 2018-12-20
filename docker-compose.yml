@@ -1,0 +1,24 @@
+version: "3"
+services:
+  database:
+    image: "postgres:10.6-alpine"
+    env_file: ./db_config.env
+    container_name: "database"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+  worker:
+    env_file: ./db_config.env
+    environment:
+        - DATABASE_CONTAINER=database
+    build:
+        context: .
+    container_name: "worker"
+    depends_on:
+      - "database"
+    links:
+      - database:database
+volumes:
+  db-data:
+    driver: local
