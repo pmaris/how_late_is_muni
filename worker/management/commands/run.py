@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 import how_late_is_muni.settings as settings
 import worker.libs.utils as utils
-from worker.models import Route
+from worker.models import Route, ScheduleClass
 from worker.route_manager import RouteManager
 from worker.route_worker import RouteWorker
 
@@ -27,17 +27,15 @@ class Command(BaseCommand):
                                   'agency.')
 
     def handle(self, *args, **options):
-
-        # Get currently active routes. The routes will have to be updated when the schedules change.
-        active_routes = Route.objects.filter(schedule_class__is_active=True)
-        active_route_tags = [route.tag for route in active_routes]
-
-        service_class = utils.get_current_service_class()
-
         if options['route_tag'] is None:
-
             manager = RouteManager()
         else:
+            service_class = utils.get_current_service_class()
+            active_schedule_classes = ScheduleClass.objects.filter(is_active=True,
+                                                                   service_class=service_class)\
+                                                           .values_list('route_id', flat=True)
+            active_route_tags = Route.objects.filter(id__in=active_schedule_classes).values_list('tag', flat=True)
+
             if options['route_tag'] not in active_route_tags:
                 raise CommandError('Route %s is not a valid route' % options['route_tag'])
 

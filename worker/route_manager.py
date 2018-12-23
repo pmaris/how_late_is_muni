@@ -7,7 +7,7 @@ import time
 
 import how_late_is_muni.settings as settings
 from worker.libs import route, schedule, utils
-from worker.models import Route
+from worker.models import Route, ScheduleClass
 from worker.route_worker import RouteWorker
 
 from py_nextbus import NextBusClient
@@ -79,8 +79,10 @@ class RouteManager(object):
         self.check_for_new_schedules()
 
         self.service_class = utils.get_current_service_class()
-        self.active_routes = Route.objects.filter(schedule_class__is_active=True,
-                                                  schedule_class__service_class=self.service_class)
+        active_schedule_classes = ScheduleClass.objects.filter(is_active=True,
+                                                               service_class=self.service_class)\
+                                                       .values_list('route_id', flat=True)
+        self.active_routes = Route.objects.filter(id__in=active_schedule_classes)
 
         self.stop_workers()
         self.start_workers()
